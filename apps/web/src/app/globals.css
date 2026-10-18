@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark mode is class-based: the inline theme script in the root layout adds `.dark` to <html>
+   from the saved preference (or the OS setting when the preference is "system"). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- Design tokens ----
+   Components use semantic names (bg-card, text-muted-foreground, bg-primary, …), never raw
+   colors, so light/dark mode and future re-theming happen in this one file.
+   Names follow shadcn/ui conventions; success/warning/brand-soft are DevFlow additions. */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(0.99 0.002 240);
+  --foreground: oklch(0.2 0.015 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.015 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.015 255);
+
+  --primary: oklch(0.5 0.115 205);
+  --primary-foreground: oklch(0.99 0.005 200);
+  --brand-soft: oklch(0.955 0.025 200);
+
+  --secondary: oklch(0.96 0.005 240);
+  --secondary-foreground: oklch(0.25 0.015 255);
+  --muted: oklch(0.963 0.004 240);
+  --muted-foreground: oklch(0.5 0.016 255);
+  --accent: oklch(0.955 0.007 230);
+  --accent-foreground: oklch(0.22 0.015 255);
+
+  --destructive: oklch(0.577 0.215 27);
+  --success: oklch(0.6 0.14 155);
+  --warning: oklch(0.73 0.15 70);
+
+  --border: oklch(0.912 0.006 245);
+  --input: oklch(0.9 0.007 245);
+  --ring: oklch(0.5 0.115 205);
+
+  --chart-1: oklch(0.5 0.115 205);
+  --chart-2: oklch(0.6 0.14 155);
+  --chart-3: oklch(0.73 0.15 70);
+  --chart-4: oklch(0.55 0.15 285);
+  --chart-5: oklch(0.577 0.215 27);
+
+  --sidebar: oklch(0.982 0.003 240);
+  --sidebar-foreground: oklch(0.25 0.015 255);
+  --sidebar-primary: oklch(0.5 0.115 205);
+  --sidebar-primary-foreground: oklch(0.99 0.005 200);
+  --sidebar-accent: oklch(0.945 0.008 240);
+  --sidebar-accent-foreground: oklch(0.2 0.015 255);
+  --sidebar-border: oklch(0.912 0.006 245);
+  --sidebar-ring: oklch(0.5 0.115 205);
+}
+
+.dark {
+  --background: oklch(0.155 0.008 255);
+  --foreground: oklch(0.95 0.004 255);
+  --card: oklch(0.185 0.009 255);
+  --card-foreground: oklch(0.95 0.004 255);
+  --popover: oklch(0.2 0.01 255);
+  --popover-foreground: oklch(0.95 0.004 255);
+
+  --primary: oklch(0.79 0.105 200);
+  --primary-foreground: oklch(0.18 0.03 220);
+  --brand-soft: oklch(0.25 0.035 210);
+
+  --secondary: oklch(0.235 0.01 255);
+  --secondary-foreground: oklch(0.93 0.005 255);
+  --muted: oklch(0.225 0.01 255);
+  --muted-foreground: oklch(0.69 0.013 255);
+  --accent: oklch(0.25 0.012 255);
+  --accent-foreground: oklch(0.95 0.004 255);
+
+  --destructive: oklch(0.68 0.19 25);
+  --success: oklch(0.72 0.15 155);
+  --warning: oklch(0.8 0.14 75);
+
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.79 0.105 200);
+
+  --chart-1: oklch(0.79 0.105 200);
+  --chart-2: oklch(0.72 0.15 155);
+  --chart-3: oklch(0.8 0.14 75);
+  --chart-4: oklch(0.7 0.14 285);
+  --chart-5: oklch(0.68 0.19 25);
+
+  --sidebar: oklch(0.17 0.008 255);
+  --sidebar-foreground: oklch(0.9 0.005 255);
+  --sidebar-primary: oklch(0.79 0.105 200);
+  --sidebar-primary-foreground: oklch(0.18 0.03 220);
+  --sidebar-accent: oklch(0.235 0.01 255);
+  --sidebar-accent-foreground: oklch(0.96 0.004 255);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.79 0.105 200);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Faint grid used behind marketing hero/CTA sections. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Chart tokens ----
+   Categorical slots 1-2 from the validated reference palette (dataviz skill), checked against
+   DevFlow's card surfaces in both modes: CVD ΔE ≈ 25, contrast ≥ 3:1. Charts reference roles,
+   never raw hex. */
+:root {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-grid: oklch(0.93 0.004 245);
+}
+.dark {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-grid: oklch(1 0 0 / 8%);
+}
+@theme inline {
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-grid: var(--viz-grid);
+}

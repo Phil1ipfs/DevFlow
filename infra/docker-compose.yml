@@ -1,0 +1,73 @@
+# DevFlow full stack: PostgreSQL + migrations + API + web.
+#
+#   cp infra/.env.example infra/.env     # then set real passwords
+#   docker compose -f infra/docker-compose.yml --env-file infra/.env up --build
+#
+# Web: http://localhost:3000   API (direct): http://localhost:8080/api/v1/health
+# Start order: database healthy -> migrator applies migrations -> api -> web.
+
+name: devflow
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: devflow
+      POSTGRES_USER: devflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devflow -d devflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrator:
+    build:
+      context: ../apps/api
+      target: migrator
+    environment:
+      ConnectionStrings__DevFlow: Host=db;Port=5432;Database=devflow;Username=devflow;Password=${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ../apps/api
+      target: runtime
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DevFlow: Host=db;Port=5432;Database=devflow;Username=devflow;Password=${POSTGRES_PASSWORD}
+      App__WebBaseUrl: ${WEB_BASE_URL:-http://localhost:3000}
+      # The web container proxies /api and /hubs; trust X-Forwarded-For from the compose network.
+      Proxy__TrustedNetworks__0: 172.16.0.0/12
+      # Without SMTP settings, production builds log that emails were not sent (no tokens are logged).
+      Email__SmtpHost: ${SMTP_HOST:-}
+      Email__SmtpPort: ${SMTP_PORT:-587}
+      Email__SmtpUsername: ${SMTP_USERNAME:-}
+      Email__SmtpPassword: ${SMTP_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM:-no-reply@devflow.local}
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../apps/web
+      args:
+        API_BASE_URL: http://api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  db-data:

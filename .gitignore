@@ -1,0 +1,25 @@
+# Secrets and local environment files (never commit)
+.env
+.env.*
+!.env.example
+infra/.env
+
+# .NET build output
+apps/api/**/bin/
+apps/api/**/obj/
+apps/api/**/TestResults/
+*.user
+.vs/
+
+# Node / Next.js
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
