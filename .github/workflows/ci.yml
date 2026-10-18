@@ -144,27 +144,47 @@ jobs:
             ${{ runner.temp }}/web.log
           retention-days: 7
 
+  # Builds every image on every run. On main, once all tests pass, the API and migrator images
+  # are also published (privately) to GitHub Container Registry for Azure Container Apps to pull.
   docker:
     name: Docker images
-    needs: [api, web]
+    needs: [api, web, e2e]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      - name: Image names (registry paths must be lowercase)
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - name: Sign in to GitHub Container Registry
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build API image
         uses: docker/build-push-action@v6
         with:
           context: apps/api
           target: runtime
-          push: false
-          tags: devflow-api:ci
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/devflow-api:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/devflow-api:latest
       - name: Build migrator image
         uses: docker/build-push-action@v6
         with:
           context: apps/api
           target: migrator
-          push: false
-          tags: devflow-migrator:ci
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/devflow-migrator:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/devflow-migrator:latest
       - name: Build web image
         uses: docker/build-push-action@v6
         with:

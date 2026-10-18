@@ -1,0 +1,20 @@
+name: Wake API
+
+# The API on Azure Container Apps scales to zero when idle (free tier). Background jobs (due-date
+# reminders, ticket escalation, data retention) run when it starts, so waking it on a schedule
+# keeps them running even when nobody is using the app. The health endpoint needs no secret.
+on:
+  schedule:
+    - cron: "0 */4 * * *" # every 4 hours
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: vars.API_HEALTH_URL != ''
+    steps:
+      - name: Call the health endpoint (allows time for a cold start)
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 15 --retry-all-errors --max-time 60 "${{ vars.API_HEALTH_URL }}"
