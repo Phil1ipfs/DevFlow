@@ -144,47 +144,58 @@ jobs:
             ${{ runner.temp }}/web.log
           retention-days: 7
 
-  # Builds every image on every run. On main, once all tests pass, the API and migrator images
-  # are also published (privately) to GitHub Container Registry for Azure Container Apps to pull.
+  # Applies EF Core migrations to the production database on main, after every test has passed.
+  # Render deploys the API only once all checks (including this one) succeed, so the schema is
+  # always migrated before new code runs. Skipped until the PRODUCTION_DATABASE secret exists.
+  migrate:
+    name: Migrate production database
+    needs: [api, web, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-migrations
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      ConnectionStrings__DevFlow: ${{ secrets.PRODUCTION_DATABASE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: apps/api/global.json
+      - name: Apply migrations
+        run: |
+          if [ -z "$ConnectionStrings__DevFlow" ]; then
+            echo "::notice::PRODUCTION_DATABASE secret is not set; skipping production migrations."
+            exit 0
+          fi
+          dotnet restore
+          dotnet tool restore
+          dotnet ef database update --project src/DevFlow.Infrastructure --startup-project src/DevFlow.Api
+
   docker:
     name: Docker images
-    needs: [api, web, e2e]
+    needs: [api, web]
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    env:
-      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - name: Image names (registry paths must be lowercase)
-        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-      - name: Sign in to GitHub Container Registry
-        if: env.PUBLISH == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build API image
         uses: docker/build-push-action@v6
         with:
           context: apps/api
           target: runtime
-          push: ${{ env.PUBLISH == 'true' }}
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/devflow-api:${{ github.sha }}
-            ${{ env.IMAGE_PREFIX }}/devflow-api:latest
+          push: false
+          tags: devflow-api:ci
       - name: Build migrator image
         uses: docker/build-push-action@v6
         with:
           context: apps/api
           target: migrator
-          push: ${{ env.PUBLISH == 'true' }}
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/devflow-migrator:${{ github.sha }}
-            ${{ env.IMAGE_PREFIX }}/devflow-migrator:latest
+          push: false
+          tags: devflow-migrator:ci
       - name: Build web image
         uses: docker/build-push-action@v6
         with:

@@ -1,6 +1,6 @@
 name: Wake API
 
-# The API on Azure Container Apps scales to zero when idle (free tier). Background jobs (due-date
+# The API on Render's free tier sleeps after 15 minutes idle. Background jobs (due-date
 # reminders, ticket escalation, data retention) run when it starts, so waking it on a schedule
 # keeps them running even when nobody is using the app. The health endpoint needs no secret.
 on:
