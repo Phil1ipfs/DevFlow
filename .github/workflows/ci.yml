@@ -101,6 +101,8 @@ jobs:
       - name: Migrate database
         working-directory: apps/api
         run: |
+          # The EF tool inspects the project before building it, so packages must be restored first.
+          dotnet restore
           dotnet tool restore
           dotnet ef database update --project src/DevFlow.Infrastructure --startup-project src/DevFlow.Api
 
