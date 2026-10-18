@@ -37,10 +37,14 @@ test.describe("projects and the Kanban board", () => {
     await page.reload();
     await expect(column(page, "In progress")).toContainText("Build auth API");
 
-    // Keyboard drag: Space picks up, arrow moves, Space drops.
-    await card(page, "Design login page").focus();
+    // Keyboard drag: Space picks up, arrow moves, Space drops. Each step waits for what a
+    // screen-reader user would get: the "picked up" state, then the live announcement.
+    const keyboardCard = card(page, "Design login page");
+    await keyboardCard.focus();
     await page.keyboard.press("Space");
+    await expect(keyboardCard).toHaveAttribute("aria-pressed", "true");
     await page.keyboard.press("ArrowRight");
+    await expect(page.locator("[aria-live]").filter({ hasText: "is over In progress" })).toHaveCount(1);
     await page.keyboard.press("Space");
     await expect(column(page, "In progress")).toContainText("Design login page");
   });
