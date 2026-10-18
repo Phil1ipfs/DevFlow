@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { HttpTransportType, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { notificationKeys, type Notification } from "@/lib/api/insights";
@@ -24,7 +24,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
 
     const connection = new HubConnectionBuilder()
-      .withUrl("/hubs/notifications")
+      // Vercel cannot pass WebSockets through to the API, so long-poll there (Vercel exposes
+      // NEXT_PUBLIC_VERCEL_ENV at build time). Elsewhere SignalR picks the best transport.
+      .withUrl("/hubs/notifications", process.env.NEXT_PUBLIC_VERCEL_ENV ? { transport: HttpTransportType.LongPolling } : {})
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();

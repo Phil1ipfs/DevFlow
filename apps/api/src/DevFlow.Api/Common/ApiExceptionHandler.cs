@@ -36,6 +36,13 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
                 Status = StatusCodes.Status409Conflict,
                 Title = conflict.Message,
             },
+            // Malformed or cut-off requests (e.g. the browser navigated away mid-upload) are the
+            // client's problem, not a server fault: answer with Kestrel's status, don't log an error.
+            BadHttpRequestException badRequest => new ProblemDetails
+            {
+                Status = badRequest.StatusCode,
+                Title = "The request could not be read.",
+            },
             _ => new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,

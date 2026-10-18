@@ -65,11 +65,23 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
+// Behind a proxy with no fixed addresses (Vercel), trust is a shared secret instead of an IP
+// range; see ProxyGateMiddleware. Held in a secret store, never in appsettings.
+var proxySharedSecret = builder.Configuration["Proxy:SharedSecret"];
+if (!string.IsNullOrEmpty(proxySharedSecret) && proxySharedSecret.Length < 32)
+{
+    throw new InvalidOperationException("Proxy:SharedSecret must be at least 32 characters long.");
+}
+
 var app = builder.Build();
 
 // ---- HTTP request pipeline (middleware runs in the order it is added) ----
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseForwardedHeaders();
+if (!string.IsNullOrEmpty(proxySharedSecret))
+{
+    app.UseMiddleware<ProxyGateMiddleware>(proxySharedSecret);
+}
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -93,6 +105,8 @@ app.UseAuthorization();
 
 app.MapHealthEndpoints();
 app.MapControllers();
-app.MapHub<NotificationHub>(NotificationHub.Path);
+// Where WebSockets cannot pass the proxy (Vercel), clients long-poll. Each poll is answered
+// within 25 s so it finishes well inside proxy request time limits.
+app.MapHub<NotificationHub>(NotificationHub.Path, options => options.LongPolling.PollTimeout = TimeSpan.FromSeconds(25));
 
 app.Run();

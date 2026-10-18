@@ -31,9 +31,12 @@ test.describe("projects and the Kanban board", () => {
     await expect(column(page, "To do")).toContainText("WEB-1");
     await expect(column(page, "To do")).toContainText("Build auth API");
 
-    // Pointer drag into another column.
+    // Pointer drag into another column. The board updates optimistically, so wait for the save
+    // to finish before reloading; a reload would otherwise abort it.
+    const moveSaved = page.waitForResponse((response) => /\/api\/v1\/tasks\/[^/]+\/move$/.test(response.url()));
     await drag(page, await centre(page, card(page, "Build auth API")), await centre(page, column(page, "In progress").locator("ul")));
     await expect(column(page, "In progress")).toContainText("Build auth API");
+    expect((await moveSaved).ok()).toBe(true);
     await page.reload();
     await expect(column(page, "In progress")).toContainText("Build auth API");
 
