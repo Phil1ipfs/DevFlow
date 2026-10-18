@@ -16,7 +16,50 @@ Internet ──HTTPS──► load balancer / ingress ──► web :3000 ──
                     (TLS terminates here)        (private)     (private)
 ```
 
-## Recommended target: Azure
+## Current deployment: Vercel + Render + Neon (free tiers)
+
+The live site runs on free tiers. The topology differs from the diagram above: the API is
+publicly reachable (Render has no private network to Vercel), so it trusts only requests that
+carry a shared secret added by the web app's proxy.
+
+```text
+Browser ──► Vercel (Next.js, devflow-eight-lovat.vercel.app)
+              │ src/proxy.ts rewrites /api/* and /hubs/*, adding
+              │ X-DevFlow-Proxy-Secret and X-DevFlow-Client-IP
+              ▼
+            Render web service devflow-api (Docker, Virginia, free) ──► Neon PostgreSQL (us-east-1, free)
+              ProxyGateMiddleware: no secret → 404 (health endpoints stay open)
+```
+
+| Where | Setting | Value |
+| --- | --- | --- |
+| Vercel project `devflow` | Root directory | `apps/web` |
+| | `API_BASE_URL` | `https://devflow-api-t5us.onrender.com` |
+| | `PROXY_SHARED_SECRET` (sensitive) | same value as the API's `Proxy__SharedSecret` |
+| | Neon variables | added by the Neon integration; the web app does not use them |
+| Render service `devflow-api` | Root directory / Dockerfile | `apps/api` / `./Dockerfile` (last stage = `runtime`) |
+| | Health check | `/api/v1/health/live` |
+| | Auto-deploy | after CI checks pass |
+| | `ConnectionStrings__DevFlow` | Neon **direct** (non `-pooler`) connection: background jobs hold session advisory locks |
+| | `Proxy__SharedSecret` | 64 random characters (at least 32 required) |
+| | `App__WebBaseUrl` | `https://devflow-eight-lovat.vercel.app` |
+| | `PORT` | `8080` |
+| GitHub repo | secret `PRODUCTION_DATABASE` | same connection string; CI's `migrate` job applies migrations on `main` |
+| | variable `API_HEALTH_URL` | used by `wake-api.yml` to wake the API every 4 hours so background jobs run |
+
+Free-tier trade-offs:
+
+- Render sleeps after 15 minutes idle; the first request afterwards takes 30–60 s.
+- Vercel cannot proxy WebSockets to another host, so on Vercel the SignalR client long-polls
+  (`NEXT_PUBLIC_VERCEL_ENV` is set there), and the hub answers each poll within 25 s.
+- Vercel's Hobby plan is for non-commercial use.
+- No SMTP is configured: invitations and password resets are created but their emails are not
+  sent (the API logs an error). Set `Email__SmtpHost`, `Email__SmtpUsername`,
+  `Email__SmtpPassword` and `Email__FromAddress` on Render to enable delivery.
+
+To rotate the proxy secret, set a new value in both Render and Vercel, then redeploy both.
+
+## Recommended target for production scale: Azure
 
 Any container platform works (AWS ECS/App Runner, Google Cloud Run, Kubernetes, a VM with
 Docker Compose). On Azure the managed equivalents are:
